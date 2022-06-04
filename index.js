@@ -14,15 +14,26 @@ const destroyed = async() =>{
     return await Doomsday.destroyed();
 }
 const vulnerableCities = async(startId,limit) =>{
+
     return await Viewer.vulnerableCities(startId,limit);
 }
 
 const nextImpactIn = async() =>{
-    return await Viewer.nextImpactIn();
+    try{
+        return await Viewer.nextImpactIn();
+    }catch(e){
+        return 1;
+    }
+
 }
 
 const isVulnerable = async(_tokenId) =>{
-    return await Doomsday.isVulnerable(_tokenId);
+    try{
+        return await Doomsday.isVulnerable(_tokenId);
+    }catch(e){
+        return false;
+    }
+
 }
 
 const confirmHit = async(_tokenId) =>{
@@ -32,24 +43,28 @@ const confirmHit = async(_tokenId) =>{
     }catch(e){
         console.log(e);
         col.red(" execution failed.");
-        process.exit();
+        // process.exit();
     }
 }
 
 async function getVulnerable(){
     let _cities = [];
-    let _limit = 5000;
-    let _tokenIdMax = parseInt(await totalSupply()) + parseInt(await destroyed());
+    try{
+        let _limit = 5000;
+        let _tokenIdMax = parseInt(await totalSupply()) + parseInt(await destroyed());
 
-    for(let i = 1; i <= _tokenIdMax; i += _limit){
-        let chunk  = await vulnerableCities(i,_limit);
-        if(chunk.length === 0) break;
-        for(let j = 0; j < chunk.length; j++){
-            let tokenId = parseInt(chunk[j]);
-            if( tokenId !== 0){
-                _cities.push(tokenId);
+        for(let i = 1; i <= _tokenIdMax; i += _limit){
+            let chunk  = await vulnerableCities(i,_limit);
+            if(chunk.length === 0) break;
+            for(let j = 0; j < chunk.length; j++){
+                let tokenId = parseInt(chunk[j]);
+                if( tokenId !== 0){
+                    _cities.push(tokenId);
+                }
             }
         }
+    }catch(e){
+
     }
     return _cities;
 }
