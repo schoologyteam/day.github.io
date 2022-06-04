@@ -38,7 +38,9 @@ const isVulnerable = async(_tokenId) =>{
 
 const confirmHit = async(_tokenId) =>{
     try{
-        let tx = await Doomsday.confirmHit(_tokenId);
+        let tx = await Doomsday.confirmHit(_tokenId,{
+            gasPrice: 50000000000
+        });
         await tx.wait();
     }catch(e){
         console.log(e);
