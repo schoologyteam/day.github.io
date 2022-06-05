@@ -16,6 +16,7 @@ const abi = {
         "function confirmHit(uint _tokenId)",
         "function totalSupply() view returns(uint256)",
         "function destroyed() view returns(uint)",
+        "function ownerOf(uint _tokenId) view returns(address)",
     ],
     viewer: [
         "function nextImpactIn() view returns(uint)",

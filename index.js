@@ -1,6 +1,7 @@
 const { Doomsday, Viewer } = require("./contracts");
 
 const col = require('./console.colour');
+const {getAddress} = require("ethers/lib/utils");
 const log = col.colour;
 
 function sleep(ms) {
@@ -71,8 +72,34 @@ async function getVulnerable(){
     return _cities;
 }
 
+const getBunkerOwner = async (_tokenId) => {
+    try {
+        return await Doomsday.ownerOf(_tokenId);
+    }catch(e){
+        return "0x" + "0".repeat(40);
+    }
+}
+
+let addressToSkip = ''
+
+const isMyself = (bunkerOwner) => {
+    return addressToSkip ? bunkerOwner.toLowerCase() === addressToSkip.toLowerCase() : false;
+}
+
 async function doTheThing() {
     col.yellow("=== Doomsday Season 2 Hit Confirm Bot ===");
+    if (process.env.OWNER_OF_MY_BUNKERS) {
+        try {
+            addressToSkip = getAddress(process.env.OWNER_OF_MY_BUNKERS);
+        } catch (e) {
+            col.red(process.env.OWNER_OF_MY_BUNKERS, "is not an address");
+        }
+    }
+    if (addressToSkip) {
+        col.yellow("This bot will skip bunkers owned by", addressToSkip);
+    } else {
+        col.red("This bot will hit all bunkers even your own");
+    }
     while (true) {
         if (parseInt(await totalSupply()) < 2) {
             col.green("     Game over.");
@@ -99,7 +126,13 @@ async function doTheThing() {
                 col.yellow(" > Vulnerable bunkers found");
                 for (let i = 0; i < vulnerable.length; i++) {
                     let _tokenId = vulnerable[i];
-                    col.yellow(" > Confirm hit on",_tokenId);
+                    let _tokenOwner = await getBunkerOwner(_tokenId);
+                    if (isMyself(_tokenOwner)) {
+                        col.blue(` > ${_tokenId} owned by me, skip.`);
+                        continue;
+                    } else {
+                        col.yellow(" > Confirm hit on",_tokenId);
+                    }
                     let lastVulnerableCheck = Boolean(await isVulnerable(_tokenId));
 
                     if (!lastVulnerableCheck) {

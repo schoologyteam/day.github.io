@@ -25,8 +25,8 @@ keys to random stuff.
 
 Create a file called `.env` in the main directory (same directory as this readme file)
 
-Copy the contents of `.env.example`, but replace `YOUR_ALCHEMY_KEY_GOES_HERE` and `YOUR_PRIVATE_KEY_GOES_HERE` with your
- Alchemy API key and Private key respectively. 
+Copy the contents of `.env.example`, but replace `YOUR_ALCHEMY_KEY_GOES_HERE`, `YOUR_PRIVATE_KEY_GOES_HERE` and `OWNER_OF_MY_BUNKERS` with your
+ Alchemy API key, Private key and Owner address respectively. 
 
 Note: keep the quotation marks in there.
 
