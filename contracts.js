@@ -61,18 +61,18 @@ function createDoomsdayQuery() {
         }
     }
 
-    const willBecomeVulnerable = async (tokenToHit, tokenToEvacuate) => {
+    const willBecomeVulnerable = async (tokenToEvacuate) => {
         await init()
-        const tx = await doomsdayQuery.populateTransaction.willBecomeVulnerable(tokenToHit, tokenToEvacuate);
+        const tx = await doomsdayQuery.populateTransaction.willBecomeVulnerable(tokenToEvacuate);
         const callResult = await provider.send("eth_call", [tx, {blockNumber: 'latest'}, {
             [address.doomsday]: {
                 code: doomsdayQueryBytecode
             }
         }])
         const result = doomsdayQuery.interface.decodeFunctionResult('willBecomeVulnerable', callResult)[0];
-        assert(isFinite(result));
-        assert(result >= 0);
-        return result;
+        assert(Array.isArray(result));
+        // result has some unused properties, remove them
+        return result.map(({tokenId, tokenOwner}) => ({tokenId, tokenOwner}));
     }
 
     return {

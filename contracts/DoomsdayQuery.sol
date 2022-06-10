@@ -167,28 +167,47 @@ contract DoomsdayQuery {
         destroyed++;
     }
 
-    function willBecomeVulnerable(uint[] calldata tokensToHit, uint tokenToEvacuate) public returns (uint32) {
+    struct TokenAndOwner {
+        uint32 tokenId;
+        address tokenOwner;
+    }
+
+    function willBecomeVulnerable(uint tokenToEvacuate) public returns (TokenAndOwner[] memory) {
+        TokenAndOwner[] memory empty = new TokenAndOwner[](0);
         if (stage() != Stage.Apocalypse) {
-            return 0;
-        }
-        for (uint i = 0; i < tokensToHit.length; i += 1) {
-            uint tokenToHit = tokensToHit[i];
-            if (canConfirmHit(tokenToHit)) {
-                // if hit can be confirmed before evacuation then confirm it without evacuation
-                // return 0 to indicate that evacuation is not required
-                return 0;
-            }
+            return empty;
         }
         if (!canEvacuate(tokenToEvacuate)) {
-            return 0;
+            return empty;
         }
-        evacuate(tokenToEvacuate);
-        for (uint i = 0; i < tokensToHit.length; i += 1) {
-            uint tokenToHit = tokensToHit[i];
-            if (canConfirmHit(tokenToHit)) {
-                return uint32(tokenToHit);
+        uint maxTokenId = tokenIndexToCity.length;
+        for (uint tokenId = 1; tokenId <= maxTokenId; tokenId += 1) {
+            if (canConfirmHit(tokenId)) {
+                // if hit can be confirmed before evacuation then confirm it without evacuation
+                return empty;
             }
         }
-        return 0;
+
+        evacuate(tokenToEvacuate);
+
+        TokenAndOwner[] memory tmp = new TokenAndOwner[](maxTokenId);
+        uint tmpIndex = 0;
+        for (uint tokenId = 1; tokenId <= maxTokenId; tokenId += 1) {
+            if (canConfirmHit(tokenId)) {
+                address tokenOwner = owners[tokenId];
+                tmp[tmpIndex] = TokenAndOwner({
+                    tokenId: uint32(tokenId),
+                    tokenOwner: tokenOwner
+                });
+                tmpIndex += 1;
+            }
+        }
+
+        TokenAndOwner[] memory result = new TokenAndOwner[](tmpIndex);
+        for (uint i = 0; i < tmpIndex; i += 1) {
+            result[i] = tmp[i];
+        }
+
+        return result;
     }
 }

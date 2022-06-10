@@ -37,9 +37,9 @@ const isVulnerable = async(_tokenId) =>{
 
 }
 
-const willBecomeVulnerable = async (tokensToHit, tokenToEvacuate) => {
+const willBecomeVulnerable = async (tokenToEvacuate) => {
     try {
-        return await DoomsdayQuery.willBecomeVulnerable(tokensToHit, tokenToEvacuate);
+        return await DoomsdayQuery.willBecomeVulnerable(tokenToEvacuate);
     } catch (e) {
         console.log(e);
         return 0;
@@ -188,13 +188,22 @@ async function doTheThing() {
                 if (_nextImpact > 100) {
                     // run this dangerous strategy when everything is settled (there are no vulnerable bunkers)
                     // and there is enough time
-                    const vulnerableBunker = await willBecomeVulnerable(BUNKERS_TO_HIT, BUNKER_TO_EVACUATE);
-                    if (vulnerableBunker > 0) {
-                        col.yellow(` >> Bunker ${vulnerableBunker} will become vulnerable if ${BUNKER_TO_EVACUATE} is evacuated`);
-                        col.yellow("evacuating:", BUNKER_TO_EVACUATE);
-                        await evacuate(BUNKER_TO_EVACUATE);
-                        col.green("     done.");
-                        continue;
+                    const vulnerableBunkers = await willBecomeVulnerable(BUNKER_TO_EVACUATE);
+                    if (vulnerableBunkers.length) {
+                        const tokens = vulnerableBunkers.map(value => value.tokenId);
+                        const hasMyBunkers = vulnerableBunkers.some(value => isMyself(value.tokenOwner));
+                        col.yellow(` >> Bunkers ${tokens.join(',')} will become vulnerable if ${BUNKER_TO_EVACUATE} is evacuated`);
+                        if (hasMyBunkers) {
+                            col.yellow(`Some bunkers are mine, do not evacuate`);
+                        } else {
+                            const hasBunkersToHit = vulnerableBunkers.some(token => BUNKERS_TO_HIT.indexOf(token.tokenId) >= 0);
+                            if (hasBunkersToHit) {
+                                col.yellow("evacuating:", BUNKER_TO_EVACUATE);
+                                await evacuate(BUNKER_TO_EVACUATE);
+                                col.green("     done.");
+                                continue;
+                            }
+                        }
                     }
                 }
                 await sleep(5000);
