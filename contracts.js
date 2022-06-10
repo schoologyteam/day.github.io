@@ -70,12 +70,14 @@ function createDoomsdayQuery() {
             }
         }])
         const result = doomsdayQuery.interface.decodeFunctionResult('willBecomeVulnerable', callResult)[0];
-        assert(result === true || result === false);
+        assert(isFinite(result));
+        assert(result >= 0);
         return result;
     }
 
     return {
-        willBecomeVulnerable
+        willBecomeVulnerable,
+        init,
     }
 }
 

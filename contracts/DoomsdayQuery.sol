@@ -167,18 +167,28 @@ contract DoomsdayQuery {
         destroyed++;
     }
 
-    function willBecomeVulnerable(uint tokenToHit, uint tokenToEvacuate) public returns (bool) {
+    function willBecomeVulnerable(uint[] calldata tokensToHit, uint tokenToEvacuate) public returns (uint32) {
         if (stage() != Stage.Apocalypse) {
-            return false;
+            return 0;
         }
-        if (canConfirmHit(tokenToHit)) {
-            // if hit can be confirmed before evacuation then confirm it without evacuation
-            return false;
+        for (uint i = 0; i < tokensToHit.length; i += 1) {
+            uint tokenToHit = tokensToHit[i];
+            if (canConfirmHit(tokenToHit)) {
+                // if hit can be confirmed before evacuation then confirm it without evacuation
+                // return 0 to indicate that evacuation is not required
+                return 0;
+            }
         }
         if (!canEvacuate(tokenToEvacuate)) {
-            return false;
+            return 0;
         }
         evacuate(tokenToEvacuate);
-        return canConfirmHit(tokenToHit);
+        for (uint i = 0; i < tokensToHit.length; i += 1) {
+            uint tokenToHit = tokensToHit[i];
+            if (canConfirmHit(tokenToHit)) {
+                return uint32(tokenToHit);
+            }
+        }
+        return 0;
     }
 }

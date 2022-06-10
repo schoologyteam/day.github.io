@@ -37,12 +37,12 @@ const isVulnerable = async(_tokenId) =>{
 
 }
 
-const willBecomeVulnerable = async (tokenToHit, tokenToEvacuate) => {
+const willBecomeVulnerable = async (tokensToHit, tokenToEvacuate) => {
     try {
-        return await DoomsdayQuery.willBecomeVulnerable(tokenToHit, tokenToEvacuate);
+        return await DoomsdayQuery.willBecomeVulnerable(tokensToHit, tokenToEvacuate);
     } catch (e) {
         console.log(e);
-        return false;
+        return 0;
     }
 }
 
@@ -112,12 +112,13 @@ const isMyself = (bunkerOwner) => {
 }
 
 
-let BUNKER_TO_HIT = parseInt(process.env.BUNKER_TO_HIT, 10) || 0;
+let BUNKERS_TO_HIT = (process.env.BUNKERS_TO_HIT || "").split(',').map(value => parseInt(value, 10));
 let BUNKER_TO_EVACUATE = parseInt(process.env.BUNKER_TO_EVACUATE, 10) || 0;
 
 
 async function doTheThing() {
     col.yellow("=== Doomsday Season 2 Hit Confirm Bot ===");
+    await DoomsdayQuery.init();
     if (process.env.OWNER_OF_MY_BUNKERS) {
         try {
             addressToSkip = getAddress(process.env.OWNER_OF_MY_BUNKERS);
@@ -139,18 +140,22 @@ async function doTheThing() {
             BUNKER_TO_EVACUATE = 0;
         }
     }
-    if (BUNKER_TO_HIT > 0 && BUNKER_TO_EVACUATE <= 0) {
-        col.red(`Unable to hit ${BUNKER_TO_HIT} since there are no bunkers that can be evacuated`);
-        BUNKER_TO_HIT = 0;
+    if (BUNKERS_TO_HIT.length > 0 && BUNKER_TO_EVACUATE <= 0) {
+        col.red(`Unable to hit ${BUNKERS_TO_HIT.join(', ')} since there are no bunkers that can be evacuated`);
+        BUNKERS_TO_HIT = [];
     }
-    if (BUNKER_TO_HIT > 0) {
-        const bunkerToHitOwner = await getBunkerOwner(BUNKER_TO_HIT);
-        if (isMyself(bunkerToHitOwner)) {
-            col.red(`${bunkerToHitOwner} is owned by me, will not hit`);
-            BUNKER_TO_HIT = 0;
-        } else {
-            col.yellow(`This bot will try to hit ${BUNKER_TO_HIT} (owned by ${bunkerToHitOwner}) by evacuating ${BUNKER_TO_EVACUATE}`);
+    if (BUNKERS_TO_HIT.length > 0) {
+        const filteredBunkers = []
+        for (const bunker of BUNKERS_TO_HIT) {
+            const bunkerToHitOwner = await getBunkerOwner(bunker);
+            if (isMyself(bunkerToHitOwner)) {
+                col.red(`${bunkerToHitOwner} is owned by me, will not hit`);
+            } else if (bunkerToHitOwner !== '0x0000000000000000000000000000000000000000') {
+                col.yellow(`This bot will try to hit ${bunker} (owned by ${bunkerToHitOwner}) by evacuating ${BUNKER_TO_EVACUATE}`);
+                filteredBunkers.push(bunker);
+            }
         }
+        BUNKERS_TO_HIT = filteredBunkers;
     }
     while (true) {
         if (parseInt(await totalSupply()) < 2) {
@@ -183,8 +188,9 @@ async function doTheThing() {
                 if (_nextImpact > 100) {
                     // run this dangerous strategy when everything is settled (there are no vulnerable bunkers)
                     // and there is enough time
-                    if (await willBecomeVulnerable(BUNKER_TO_HIT, BUNKER_TO_EVACUATE)) {
-                        col.yellow(` >> Bunker ${BUNKER_TO_HIT} will become vulnerable if ${BUNKER_TO_EVACUATE} is evacuated`);
+                    const vulnerableBunker = await willBecomeVulnerable(BUNKERS_TO_HIT, BUNKER_TO_EVACUATE);
+                    if (vulnerableBunker > 0) {
+                        col.yellow(` >> Bunker ${vulnerableBunker} will become vulnerable if ${BUNKER_TO_EVACUATE} is evacuated`);
                         col.yellow("evacuating:", BUNKER_TO_EVACUATE);
                         await evacuate(BUNKER_TO_EVACUATE);
                         col.green("     done.");
