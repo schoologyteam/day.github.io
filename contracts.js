@@ -1,5 +1,7 @@
 require('dotenv').config()
 const { ethers } = require("ethers");
+const assert = require("assert");
+const {run, artifacts} = require("hardhat");
 
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const ALCHEMY_KEY = process.env.ALCHEMY_KEY;
@@ -17,6 +19,7 @@ const abi = {
         "function totalSupply() view returns(uint256)",
         "function destroyed() view returns(uint)",
         "function ownerOf(uint _tokenId) view returns(address)",
+        "function evacuate(uint _tokenId)",
     ],
     viewer: [
         "function nextImpactIn() view returns(uint)",
@@ -43,10 +46,42 @@ for(let c in address){
     contractWithSigner[c] = contract[c].connect(signer);
 }
 
+function createDoomsdayQuery() {
 
+    let doomsdayQuery, doomsdayQueryBytecode;
+
+    const init = async () => {
+        if (!doomsdayQuery) {
+            await run("compile");
+
+            const {abi: queryAbi, deployedBytecode} = await artifacts.readArtifact("DoomsdayQuery");
+            const contract = new ethers.Contract(address.doomsday, queryAbi, provider);
+            doomsdayQuery = contract.connect(signer);
+            doomsdayQueryBytecode = deployedBytecode;
+        }
+    }
+
+    const willBecomeVulnerable = async (tokenToHit, tokenToEvacuate) => {
+        await init()
+        const tx = await doomsdayQuery.populateTransaction.willBecomeVulnerable(tokenToHit, tokenToEvacuate);
+        const callResult = await provider.send("eth_call", [tx, {blockNumber: 'latest'}, {
+            [address.doomsday]: {
+                code: doomsdayQueryBytecode
+            }
+        }])
+        const result = doomsdayQuery.interface.decodeFunctionResult('willBecomeVulnerable', callResult)[0];
+        assert(result === true || result === false);
+        return result;
+    }
+
+    return {
+        willBecomeVulnerable
+    }
+}
 
 
 module.exports = {
     Doomsday:   contractWithSigner.doomsday,
     Viewer:     contractWithSigner.viewer,
+    DoomsdayQuery: createDoomsdayQuery(),
 }
